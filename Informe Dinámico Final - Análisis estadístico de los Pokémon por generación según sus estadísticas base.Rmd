@@ -1,0 +1,406 @@
+---
+title: Análisis Estadístico de los Pokémon por Generación según sus Características Base
+author: "David Bermúdez y María Ruiz"
+date: "30 de noviembre de 2023"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#SE IMPORTAN LAS LIBRERIAS NECESARIAS
+library (tidyverse)
+library (tinytex)
+library (readr)
+library (ggplot2)
+library (grid)
+library (gridExtra)
+library (dplyr)
+library (moments)
+library (knitr)
+library (latexpdf)
+library (rmarkdown)
+library (modeest)
+
+#SE LEE EL CSV Y SE LE ASIGNA A LA VARIABLE ESCRITA
+
+#Setup en Linux (David)
+#BBDD_Pokemons <- read_csv("~/dev/rproject/pokemonsG4.csv")
+
+#Setup en Windows (María)
+Pokemons <- read_csv("C:/Users/Maria Zafira/Documents/Programación/RStudio/BBDD/Pokemons G4.csv")
+```
+
+# Planteamiento del Problema
+
+## Contexto del problema
+
+Según portales oficiales de Pokémon como Wikidex, las características de combate o estadísticas de un Pokémon son aquellas cualidades naturales que posee al atacar o defenderse en un combate representado en puntos. Estas pueden incrementarse o disminuirse dependiendo el nivel, el uso de bayas, objetos, vitaminas, puntos de esfuerzo y otros.
+
+Cabe destacar que estos puntos son simplemente referenciales en combate, dado que se obtienen por pertenecer a su especie y son inalterables, indicando así que no representan al Pokémon en nigún nivel real del juego. Sin embargo, estas funcionan como parámetro para calcular el valor de cada estadística por nivel y permiten estudiar cada ítem para mejorar la estrategia de algún jugador.
+
+Aunque un jugador de Pokémon pueda saber mucho a través de su experiencia en el juego, estudiar ciertos comportamientos de las características base en cada generación le permitirá establecer mejores estrategias de juego si en algún momento se enfrenta a un combate generacional o desea identificar detalles que lo llevarían a ser más efectivo.
+
+El presente informe buscará cumplir el siguiente objetivo. Encontrar formas de llegar a ello sin limitaciones de tiempo y un manejo inicial de las herramientas será el desafío a enfrentar.
+
+
+## Objetivo General
+
+* Analizar la relación entre las estadísticas base de los Pokémon y su generación para identificar tendencias en los datos.
+
+Alegando a la resolución del objetivo general planteado, las preguntas de
+investigación a responder son las siguientes:
+
+## Preguntas de investigación
+
+* ¿Qué se puede observar en cada ítem de características base de los Pokémon según su generación?
+
+* ¿Cuál es la relación entre el ataque y la defensa de los Pokémon de cada generación?
+
+
+```{r Modificaciones al DF, include=FALSE}
+
+#Se eliminan comlumnas innecesarias
+
+Pokemons <- Pokemons %>% select(-id, -evolves_from, -type1, -type2, -height, -weight, -abilities, -desc)
+
+#Se renombran los nombres de todas las columnas del data frame ordinalmente y eliminan campos innecesarios
+
+names(Pokemons) = c("POKEMON", "RANGO", "GENERACION", "SALUD", "ATAQUE", "DEFENSA", "ATAQUE_ESPECIAL", "DEFENSA_ESPECIAL", "VELOCIDAD", "TOTAL")
+
+#Se crea una estructura de if else secuencial en la columna de RANGO y se asigna individualmente una clase en español si concide con los previos valores en inglés
+
+Pokemons$RANGO <- ifelse(Pokemons$RANGO == "ordinary", "Ordinario",
+                        ifelse(Pokemons$RANGO == "legendary", "Legendario",
+                         ifelse(Pokemons$RANGO == "mythical", "Mítico", "Bebé")))
+
+#Se crea el vector mapeo_generacion que actúa como una tabla de búsqueda y asigna los valores en español a previos valores en inglés
+
+mapeo_generacion <- c("generation-i" = "Generación 1",
+                    "generation-ii" = "Generación 2",
+                    "generation-iii" = "Generación 3",
+                    "generation-iv" = "Generación 4",
+                    "generation-v" = "Generación 5",
+                    "generation-vi" = "Generación 6",
+                    "generation-vii" = "Generación 7",
+                    "generation-viii" = "Generación 8",
+                    "generation-ix" = "Generación 9")
+
+#Se actualiza la columna BBDD_Pokemons$GENERACION indexando el vector actualizado según los valores generacionales que existían previamente en esa columna
+
+Pokemons$GENERACION <- mapeo_generacion[Pokemons$GENERACION]
+
+```
+
+```{r Nuevos DF Pregunta  1, include=FALSE}
+
+#Se crea un nuevo data frame sin la variable total para calcular las estadísticas descriptivas
+
+Pokemons_stats <- Pokemons %>% select(-TOTAL)
+
+#Se procede a calcular las estadísticas descriptivas de nuevos data frames, usando los valores particulares de cada ítem de características base (SALUD, ATAQUE, DEFENSA, ATAQUE ESPECIAL, DEFENSA ESPECIAL, VELOCIDAD), filtrándolo por generación
+
+SALUD <- Pokemons_stats %>% 
+ group_by(GENERACION) %>% 
+ summarise(SUMA = sum(SALUD),
+           PROMEDIO = mean(SALUD),
+           MEDIANA = median(SALUD),
+           MODA = mfv(SALUD),
+           CUARTIL1 = quantile(SALUD, 0.25),
+           CUARTIL3 = quantile(SALUD, 0.75),
+           MINIMO = min(SALUD),
+           MAXIMO = max(SALUD),
+           VARIANZA = var(SALUD),
+           SD = sd(SALUD),
+           CV = var(SALUD)/mean(SALUD),
+           ASIMETRIA = skewness(SALUD))
+
+ATAQUE <- Pokemons_stats %>% 
+ group_by(GENERACION) %>% 
+ summarise(SUMA = sum(ATAQUE),
+           PROMEDIO = mean(ATAQUE),
+           MEDIANA = median(ATAQUE),
+           MODA = mfv1(ATAQUE),
+           CUARTIL1 = quantile(ATAQUE, 0.25),
+           CUARTIL3 = quantile(ATAQUE, 0.75),
+           MINIMO = min(ATAQUE),
+           MAXIMO = max(ATAQUE),
+           VARIANZA = var(ATAQUE),
+           SD = sd(ATAQUE),
+           CV = var(ATAQUE)/mean(ATAQUE),
+           ASIMETRIA = skewness(ATAQUE))
+
+
+DEFENSA <- Pokemons_stats %>% 
+ group_by(GENERACION) %>% 
+ summarise(SUMA = sum(DEFENSA),
+           PROMEDIO = mean(DEFENSA),
+           MEDIANA = median(DEFENSA),
+           MODA = mfv1(DEFENSA),
+           CUARTIL1 = quantile(DEFENSA, 0.25),
+           CUARTIL3 = quantile(DEFENSA, 0.75),
+           MINIMO = min(DEFENSA),
+           MAXIMO = max(DEFENSA),
+           VARIANZA = var(DEFENSA),
+           SD = sd(DEFENSA),
+           CV = var(DEFENSA)/mean(DEFENSA),
+           ASIMETRIA = skewness(DEFENSA))
+
+ATAQUE_ESPECIAL <- Pokemons_stats %>% 
+ group_by(GENERACION) %>% 
+ summarise(SUMA = sum(ATAQUE_ESPECIAL),
+           PROMEDIO = mean(ATAQUE_ESPECIAL),
+           MEDIANA = median(ATAQUE_ESPECIAL),
+           MODA = mfv1(ATAQUE_ESPECIAL),
+           CUARTIL1 = quantile(ATAQUE_ESPECIAL, 0.25),
+           CUARTIL3 = quantile(ATAQUE_ESPECIAL, 0.75),
+           MINIMO = min(ATAQUE_ESPECIAL),
+           MAXIMO = max(ATAQUE_ESPECIAL),
+           VARIANZA = var(ATAQUE_ESPECIAL),
+           SD = sd(ATAQUE_ESPECIAL),
+           CV = var(ATAQUE_ESPECIAL)/mean(ATAQUE_ESPECIAL),
+           ASIMETRIA = skewness(ATAQUE_ESPECIAL))
+
+DEFENSA_ESPECIAL <- Pokemons_stats %>% 
+ group_by(GENERACION) %>% 
+ summarise(SUMA = sum(DEFENSA_ESPECIAL),
+           PROMEDIO = mean(DEFENSA_ESPECIAL),
+           MEDIANA = median(DEFENSA_ESPECIAL),
+           MODA = mfv1(DEFENSA_ESPECIAL),
+           CUARTIL1 = quantile(DEFENSA_ESPECIAL, 0.25),
+           CUARTIL3 = quantile(DEFENSA_ESPECIAL, 0.75),
+           MINIMO = min(DEFENSA_ESPECIAL),
+           MAXIMO = max(DEFENSA_ESPECIAL),
+           VARIANZA = var(DEFENSA_ESPECIAL),
+           SD = sd(DEFENSA_ESPECIAL),
+           CV = var(DEFENSA_ESPECIAL)/mean(DEFENSA_ESPECIAL),
+           ASIMETRIA = skewness(DEFENSA_ESPECIAL))
+
+VELOCIDAD <- Pokemons_stats %>% 
+ group_by(GENERACION) %>% 
+ summarise(SUMA = sum(VELOCIDAD),
+           PROMEDIO = mean(VELOCIDAD),
+           MEDIANA = median(VELOCIDAD),
+           MODA = mfv1(VELOCIDAD),
+           CUARTIL1 = quantile(VELOCIDAD, 0.25),
+           CUARTIL3 = quantile(VELOCIDAD, 0.75),
+           MINIMO = min(VELOCIDAD),
+           MAXIMO = max(VELOCIDAD),
+           VARIANZA = var(VELOCIDAD),
+           SD = sd(VELOCIDAD),
+           CV = var(VELOCIDAD)/mean(VELOCIDAD),
+           ASIMETRIA = skewness(VELOCIDAD))
+
+```
+
+# Resultados
+
+```{r Tabla Ptos. Salud Pregunta 1, echo=FALSE}
+
+#Se realiza una tabla para el ítem SALUD mediante la paquetería knitr::kable, agregando todos sus detalles, con la intención de mostrar los cálculos hechos en el chunk anterior de manera organizada
+
+kable(SALUD, "pipe", padding = 0, digits = c(0, 0, 2, 0, 0, 0, 0, 0, 0, 2, 2, 1, 2), full_width = FALSE, booktabs = TRUE, col.names = c("Generación", "Ptos. Totales", "X", "Md", "Moda", "Q1", "Q3", "Min", "Max", "Varianza", "SD", "CV", "AS"), align = c("c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c"), caption = ("Puntos de Salud - Estadísticas Descriptivas"), format.args = list(decimal.mark = ","))
+
+```
+
+De los 1017 Pokémon suministrados en la dase de datos, se observa que el promedio y 50% de los datos de puntos de Salud más altos se encuentran en la generación nueve con 76 y 74 puntos respectivamente, a diferencia de la suma de los mismos, donde es superado por la generación cinco con 10969 puntos acumulados. Los puntos con mayor frecuencia por generación son 65 en la primera, 75 en la segunda y en la quinta, 61 en la tercera, 70 en la cuarta, séptima, octava y novena, y 62 en la sexta. El 25% de los datos es menor a un intervalo entre los 45 y 58 puntos, mientras que el 75% es menor, entre los 80 y 90 puntos. El número mínimo se encuentra en la generación tres con 1 punto (Shedinja) y el máximo está en la generación dos con 255 puntos (Blissey). Los puntos de Salud son bastante estables, dado que sus coeficientes de variación van desde 6% al 13%, aunque esto podría ser un factor decisivo al momento de escoger un equipo.
+
+```{r Tabla Ptos. Ataque Pregunta 1, echo=FALSE}
+
+#Se realiza una tabla para el ítem ATAQUE mediante la paquetería knitr::kable, agregando todos sus detalles, con la intención de mostrar los cálculos hechos en el chunk anterior de manera organizada
+
+kable(ATAQUE, "pipe", padding = 0, digits = c(0, 0, 2, 0, 0, 0, 0, 0, 0, 2, 2, 1, 2), full_width = FALSE, booktabs = TRUE, col.names = c("Generación", "Ptos. Totales", "X", "Md", "Moda", "Q1", "Q3", "Min", "Max", "Varianza", "SD", "CV", "AS"), align = c("c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c"), caption = ("Puntos de Ataque - Estadísticas Descriptivas"), format.args = list(decimal.mark = ","))
+
+```
+
+Se observa que el promedio en puntos de Ataque más altos se encuentran en la generación siete con 85 puntos y el 50% de los datos más altos se encuentra en la generación 8 con 85. La suma mayor de los mismos está en la generación cinco con 12641 puntos acumulados. Los puntos con mayor frecuencia por generación son 45 en la primera, 75 en la segunda, 70 en la tercera, 100 en la cuarta, 55 en la quinta, 50 en la sexta, 75 en la séptima, 40 en la octava, y 55 en la novena. El 25% de los datos es menor a un intervalo entre los 50 y 60 puntos, mientras que el 75% es menor a un intervalo entre los 85 y 112 puntos. El número mínimo se encuentra en la generaciones uno y cuatro con 5 puntos (Chansey/Happiny) y el máximo está en la generación siete con 181 puntos (Kartana). Los puntos de Ataque son estables, dado que sus coeficientes de variación van del 9% al 13%.
+
+```{r Tabla Ptos. Defensa Pregunta 1, echo=FALSE}
+
+#Se realiza una tabla para el ítem DEFENSA mediante la paquetería knitr::kable, agregando todos sus detalles, con la intención de mostrar los cálculos hechos en el chunk anterior de manera organizada
+
+kable(DEFENSA, "pipe", padding = 0, digits = c(0, 0, 2, 0, 0, 0, 0, 0, 0, 2, 2, 1, 2), full_width = FALSE, booktabs = TRUE, col.names = c("Generación", "Ptos. Totales", "X", "Md", "Moda", "Q1", "Q3", "Min", "Max", "Varianza", "SD", "CV", "AS"), align = c("c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c"), caption = ("Puntos de Defensa - Estadísticas Descriptivas"), format.args = list(decimal.mark = ","))
+     
+```
+
+El promedio de puntos de Defensa más altos se encuentran en la generación siete con 79 puntos, al igual que el 50% de los datos más altos con 75. La suma mayor de los mismos está en la generación cinco con 11113 puntos acumulados. Los puntos con mayor frecuencia por generación son 80 en la séptima, 70 en la cuarta, 65 en la primera y el resto entre 60 y 50 puntos. El 25% de los datos es menor a un intervalo entre los 45 y 58 puntos, mientras que el 75% es menor a un intervalo entre los 84 y 98 puntos. El número mínimo se encuentra en la generaciones uno y cuatro con 5 puntos (Chansey/Happiny) y el máximo está en la generación dos con 230 puntos (Shuckle). Los puntos de Defensa son medianamente estables si los comparamos con otros ítems, ya que sus coeficientes de variación van desde 7% al 17%. Esto podría ser un factor decisivo al momento de escoger un equipo.
+
+```{r Tabla Ptos. Ataque Especial Pregunta 1, echo=FALSE}
+
+#Se realiza una tabla para el ítem ATAQUE_ESPECIAL mediante la paquetería knitr::kable, agregando todos sus detalles, con la intención de mostrar los cálculos hechos en el chunk anterior de manera organizada
+
+kable(ATAQUE_ESPECIAL, "pipe", padding = 0, digits = c(0, 0, 2, 0, 0, 0, 0, 0, 0, 2, 2, 1, 2), full_width = FALSE, booktabs = TRUE, col.names = c("Generación", "Ptos. Totales", "X", "Md", "Moda", "Q1", "Q3", "Min", "Max", "Varianza", "SD", "CV", "AS"), align = c("c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c"), caption = ("Puntos de Ataque Especial - Estadísticas Descriptivas"), format.args = list(decimal.mark = ","))
+
+```
+
+Se observa que el promedio en puntos de Ataque Especial más altos se encuentran en la generación siete con 75 puntos, al igual que el 50% de los datos con 70. La suma mayor de los mismos está en la generación cinco con 10802 puntos acumulados. Los puntos con mayor frecuencia por generación son 60 en la tercera y cuarta, 55 en la séptima, 50 en la primera y la seis, 45 en la novena y 40 en el resto. El 25% de los datos es menor a un intervalo entre los 40 y 50 puntos, mientras que el 75% es menor a un intervalo entre los 85 y 95 puntos. El número mínimo se encuentra en la generaciones dos, tres y cuatro con 10 puntos (Shuckle/Feebas/Bonsly) y el máximo está en la generación siete con 173 puntos (Xurkitree). Los puntos de Ataque Especial son de los ítems menos estables, dado que sus coeficientes de variación van desde 10% al 15%.
+
+```{r Tabla Ptos. Defensa Especial Pregunta 1, echo=FALSE}
+
+#Se realiza una tabla para el ítem DEFENSA_ESPECIAL mediante la paquetería knitr::kable, agregando todos sus detalles, con la intención de mostrar los cálculos hechos en el chunk anterior de manera organizada
+
+kable(DEFENSA_ESPECIAL, "pipe", padding = 0, digits = c(0, 0, 2, 0, 0, 0, 0, 0, 0, 2, 2, 1, 2), full_width = FALSE, booktabs = TRUE, col.names = c("Generación", "Ptos. Totales", "X", "Md", "Moda", "Q1", "Q3", "Min", "Max", "Varianza", "SD", "CV", "AS"), align = c("c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c"), caption = ("Puntos de Defensa Especial - Estadísticas Descriptivas"), format.args = list(decimal.mark = ","))
+
+```
+
+El promedio de puntos de Defensa Especial más altos se encuentran en la generación siete con 75 puntos y el 50% de los datos más altos se encuentra en la generación siete con 73. La suma mayor de los mismos está en la generación cinco con 10504 puntos acumulados. Los puntos con mayor frecuencia por generación son 85 en la cuarta, 80 en la primera, 75 en la sexta y séptima, 65 en la segunda, 60 en la tercera, 50 en la quinta y octava, y 40 en la 90 en la novena. El 25% de los datos es menor a un intervalo entre los 49 y 55 puntos, mientras que el 75% es menor a un intervalo entre los 80 y 86 puntos. El número mínimo se encuentra en las generaciones uno, dos, tres y ocho con 20 puntos (Magikarp/Stonjourner/Carvanha/Igglybuff) y el máximo está en la generación dos con 230 puntos (Shuckle). Los puntos de Defensa Especial son bastante estables en comparación con otros ítems, dado que sus coeficientes de variación van desde 7% al 13%.
+
+```{r Tabla Ptos. Velocidad Pregunta 1, echo=FALSE}
+
+#Se realiza una tabla para el ítem VELOCIDAD mediante la paquetería knitr::kable, agregando todos sus detalles, con la intención de mostrar los cálculos hechos en el chunk anterior de manera organizada
+
+kable(VELOCIDAD, "pipe", padding = 0, digits = c(0, 0, 2, 0, 0, 0, 0, 0, 0, 2, 2, 1, 2), full_width = FALSE, booktabs = TRUE, col.names = c("Generación", "Ptos. Totales", "X", "Md", "Moda", "Q1", "Q3", "Min", "Max", "Varianza", "SD", "CV", "AS"), align = c("c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c"), caption = ("Puntos de Velocidad - Estadísticas Descriptivas"), format.args = list(decimal.mark = ","))
+
+```
+
+El promedio de puntos de Velocidad más altos se encuentran en la generación nueve con 75 puntos, al igual que el 50% de los datos. La suma mayor de los mismos está en la generación uno con 10429 puntos acumulados. Los puntos con mayor frecuencia por generación son 85 en la segunda, 75 en la novena, 70 en la tercera, 60 en la cuarta, quinta, sexta y séptima, 50 en la tercera y 30 en la octava. El 25% de los datos es menor a un intervalo entre los 40 y 50 puntos, mientras que el 75% es menor a un intervalo entre los 79 y 96 puntos. El valor mínimo se encuentra en la generaciones dos, siete y cuatro con 5 puntos (Shuckle/Munchlax/Pyukumuku) y el máximo está en la generación ocho con 200 puntos (Regieleki). Los puntos de Velocidad son de los ítems menos estables en comparación con otros, puesto que sus coeficientes de variación van desde 10% al 17%.
+
+```{r Gráficas Pregunta 1, echo=FALSE, fig.height=50, fig.width=20}
+
+grafica_salud <- ggplot(data = Pokemons_stats, mapping = aes(x = GENERACION, y = SALUD)) + geom_boxplot(color = "darkgreen") + scale_x_discrete(labels = c("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX")) + ggtitle("Salud") + labs(x= "", y ="") + theme_light() + theme(axis.text = element_text(colour = "black", size = 7)) + theme(panel.grid = element_line(color = "lightgray"),plot.title = element_text(size = 8))
+
+grafica_ataque <- ggplot(data = Pokemons_stats, mapping = aes(x = GENERACION, y = ATAQUE)) + geom_boxplot(color = "red") + scale_x_discrete(labels = c("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX")) +  ggtitle("Ataque") + labs(x= "", y ="") + theme_light() + theme(axis.text = element_text(colour = "black", size = 7)) + theme(panel.grid = element_line(color = "lightgray"), plot.title = element_text(size = 8))
+
+grafica_defensa <- ggplot(data = Pokemons_stats, mapping = aes(x = GENERACION, y = DEFENSA)) + geom_boxplot(color = "blue") + scale_x_discrete(labels = c("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"))  + ggtitle("Defensa") + labs(x= "", y ="") + theme_light() + theme(axis.text = element_text(colour = "black", size = 7)) + theme(panel.grid = element_line(color = "lightgray"), plot.title = element_text(size = 8))
+
+grafica_ataque_especial <- ggplot(data = Pokemons_stats, mapping = aes(x = GENERACION, y = ATAQUE_ESPECIAL)) + geom_boxplot(color = "darkred") + scale_x_discrete(labels = c("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX")) + ggtitle("Ataque Especial") + labs(x= "", y ="") + theme_light() + theme(axis.text = element_text(colour = "black", size = 7)) + theme(panel.grid = element_line(color = "lightgray"), plot.title = element_text(size = 8))
+
+grafica_defensa_especial <- ggplot(data = Pokemons_stats, mapping = aes(x = GENERACION, y = ATAQUE)) + geom_boxplot(color = "purple") + scale_x_discrete(labels = c("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX")) + ggtitle("Defensa Especial") + labs(x= "", y ="") + theme_light() + theme(axis.text = element_text(colour = "black", size = 7)) + theme(panel.grid = element_line(color = "lightgray"), plot.title = element_text(size = 8))
+
+grafica_velocidad <- ggplot(data = Pokemons_stats, mapping = aes(x = GENERACION, y = VELOCIDAD)) + geom_boxplot(color = "salmon") + scale_x_discrete(labels = c("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX")) + ggtitle("Velocidad") + labs(x ="", y ="") + theme_light() + theme(axis.text = element_text(colour = "black", size = 7)) + theme(panel.grid = element_line(color = "lightgray"), plot.title = element_text(size = 8))
+```
+
+```{r Mosaico Características Base, echo=FALSE}
+
+mosaico_c.totales <- gridExtra::grid.arrange(grafica_salud, grafica_ataque, grafica_defensa, grafica_ataque_especial, grafica_defensa_especial, grafica_velocidad, top = textGrob("Gráfica 1. Características Base segun su Generación", gp = gpar(fontsize = 10)),bottom = textGrob("Generaciones", gp = gpar(fontsize = 10)), nrow =3, ncol = 2)
+
+```
+Analizando los ítems entre todas las generaciones, se puede observar que:
+
+* La mayoría de puntos de estadísticas base se encuentran concentrados entre sí según su generación.
+
+* El ítem con la mayor cantidad de datos atípicos es el de puntos de salud a pesar de su alta estabilidad.
+
+* Los ítems con menos cantidad de datos atípicos son los de puntos de Ataque, Ataque Especial y Defensa Especial sin embargo también son los que poseen la cantidad de datos más variables.
+
+
+```{r Pregunta 2 ATK y DEF, echo=FALSE, message=FALSE}
+
+# Creación del gráfico de dispersión para la relación entre "ATAQUE" y "DEFENSA" en diferentes generaciones de Pokémon
+Disp_ATK_DEF <- ggplot(Pokemons, aes(ATAQUE, DEFENSA)) +
+  geom_point(aes(color=GENERACION), size=1, fill = "white", shape = 21, stroke = 1.5) +
+  geom_smooth(aes(group = GENERACION, color = GENERACION), 
+              method = "lm", se = FALSE, linewidth = 0.5, 
+              alpha = 0.5, show.legend = FALSE)  +
+  geom_smooth(method = "lm", colour = "Black", show.legend = F) +
+  theme_minimal() +
+  labs(
+    title = "Relación entre ATK y DEF según Generaciones",
+    x = "Pts. de ataque", y = "Pts. de defensa")
+
+grid.arrange(Disp_ATK_DEF)
+
+```
+
+```{r, include=FALSE}
+# Cálculo de la correlación general entre "ATAQUE" y "DEFENSA"
+CorrGeneral_ATK_DEF <- cor(Pokemons$ATAQUE, Pokemons$DEFENSA)
+# Cálculo de la correlación por generación entre "ATAQUE" y "DEFENSA"
+CorrPorGen_ATK_DEF <- by(Pokemons, Pokemons$GENERACION, function(x) cor(x$ATAQUE, x$DEFENSA))
+
+# Impresión de la correlación general entre "ATAQUE" y "DEFENSA"
+cat("Correlación General entre ATK y DEF:",CorrGeneral_ATK_DEF)
+
+# Bucle para imprimir la correlación por generación entre "ATAQUE" y "DEFENSA"
+for (i in 1:length(CorrPorGen_ATK_DEF)) {
+  cat(names(CorrPorGen_ATK_DEF)[i], ": ")
+  cat(CorrPorGen_ATK_DEF[[i]], "\n")
+}
+```
+
+Se investigó la relación entre los atributos de ataque (ATK) y defensa (DEF) de Pokémon a lo largo de nueve generaciones. Las correlaciones obtenidas proporcionan información valiosa sobre la posible asociación entre estas dos variables.
+
+En general, se observó una correlación positiva moderada entre ATK y DEF en toda la base de datos de Pokémon, con un coeficiente de correlación de 0.4660703. Esto indica que, en promedio, los Pokémon con un mayor puntaje de ataque también tienden a tener un mayor puntaje de defensa.
+
+Sin embargo, al analizar los datos por generación, se encontraron algunas variaciones en la fuerza de la correlación. 
+
+* En la generación 1, la correlación entre ATK y DEF fue de 0.4826739, lo que sugiere una relación moderada positiva. 
+* En la generación 2, la correlación fue ligeramente menor, con un valor de 0.4128032, también indicando una relación positiva moderada entre ATK y DEF.
+* En la generación 3, la correlación entre ATK y DEF fue de 0.4096613, mostrando una relación similar a las generaciones anteriores. 
+* En la generación 4, se observó una correlación ligeramente más débil de 0.3633716, lo que sugiere una relación menos pronunciada entre ATK y DEF en comparación con las generaciones anteriores.
+* En la generación 5, la correlación entre ATK y DEF fue de 0.4268397, mostrando una ligera mejora en la relación entre estas dos variables. 
+* En la generación 6, se encontró una correlación más fuerte de 0.5938715, indicando una relación moderada y positiva entre ATK y DEF. 
+* En la generación 7, la correlación fue similar a la general, con un valor de 0.4667466.
+* En las generaciones 8 y 9, se observaron correlaciones más fuertes entre ATK y DEF, con valores de 0.5830289 y 0.5698368, respectivamente.
+
+Estos resultados indican que la relación entre ATK y DEF puede variar ligeramente en cada generación de Pokémon. Si bien en general existe una correlación positiva entre estas dos variables, la fuerza de esta relación puede ser más fuerte o más débil dependiendo de la generación específica.
+de
+
+```{r Pregunta 2 ATK_SP y DEF_SP, echo=FALSE, message=FALSE}
+# Creación del gráfico de dispersión para la relación entre "ATAQUE" y "DEFENSA" en diferentes generaciones de Pokémon
+Disp_AD_ESP <- ggplot(Pokemons, aes(ATAQUE_ESPECIAL, DEFENSA_ESPECIAL)) +
+  geom_point(aes(color=GENERACION), size=1, fill = "white", shape = 21, stroke = 1.5) +
+  geom_smooth(aes(group = GENERACION, color = GENERACION), 
+              method = "lm", se = FALSE, linewidth = 0.5, 
+              alpha = 0.5, show.legend = FALSE)  +
+  geom_smooth(method = "lm", colour = "Black", show.legend = F) +
+  theme_minimal() +
+  labs(
+    title = "Relación entre ATK_SP y DEF_SP según Generaciones",
+    x = "Pts. de Ataque especial", y = "Pts. de defensa especial")
+
+print(Disp_AD_ESP)
+```
+
+
+```{r, include=FALSE}
+# Cálculo de la correlación general entre "ATAQUE_ESPECIAL" y "DEFENSA_ESPECIAL"
+CorrGeneral_AD_ESP <- cor(Pokemons$ATAQUE_ESPECIAL, Pokemons$DEFENSA_ESPECIAL)
+
+# Cálculo de la correlación por generación entre "ATAQUE_ESPECIAL" y "DEFENSA_ESPECIAL"
+CorrPorGen_AD_ESP <- by(Pokemons, Pokemons$GENERACION, function(x) cor(x$ATAQUE_ESPECIAL, x$DEFENSA_ESPECIAL))
+
+# Impresión de la correlación general entre "ATAQUE_ESPECIAL" y "DEFENSA_ESPECIAL"
+cat("Correlación General entre ATK_SP y DEF_SP:",CorrGeneral_AD_ESP)
+
+# Bucle para imprimir la correlación por generación entre "ATAQUE_ESPECIAL" y "DEFENSA_ESPECIAL"
+for (i in 1:length(CorrPorGen_AD_ESP)) {
+  cat(names(CorrPorGen_AD_ESP)[i],": ")
+  cat(CorrPorGen_AD_ESP[[i]], "\n")
+}
+```
+
+Se realizó un análisis de la relación entre los atributos de defensa especial y ataque especial de Pokémon a lo largo de diferentes generaciones. Los resultados revelaron una correlación positiva entre defensa (DEF_SP) (ATK_SP) en la mayoría de las generaciones analizadas.
+
+En general, se observó una correlación positiva moderada de 0.4937965 entre ATK_SP y DEF_SP en toda la base de datos de Pokémon. Esto significa que existe una tendencia general en la que los Pokémon con un alto nivel de ataque especial también tienden a tener una mayor defensa especial, y viceversa. 
+
+* En la generación 1, se encontró una correlación de 0.528256, lo que sugiere una relación moderada y positiva entre ATK_SP y DEF_SP.
+* En la generación 2, la correlación fue más baja, con un valor de 0.3565145, indicando una relación positiva pero más débil entre ATK_SP y DEF_SP.
+* En la generación 3, se encontró una correlación de 0.513695, mostrando una relación moderada y positiva similar a las generaciones anteriores.
+* En la generación 4, la correlación fue de 0.4711698, lo que indica una relación positiva pero ligeramente menos pronunciada entre ATK_SP y DEF_SP en comparación con las generaciones anteriores.
+* En la generación 5, se observó una correlación de 0.5208045, mostrando una mejora en la relación entre estas dos variables.
+* En la generación 6, se encontró una correlación más fuerte de 0.6372893, indicando una relación moderada y positiva entre ATK_SP y DEF_SP.
+* En la generación 7, la correlación fue de 0.3922515, mostrando una relación más débil en comparación con la correlación general.
+* En las generaciones 8 y 9, se observaron correlaciones más fuertes entre ATK_SP y DEF_SP, con valores de 0.5680308 y 0.5269669 respectivamente.
+
+En resumen, estos resultados indican que existe una correlación positiva entre los atributos de ataque especial (ATK_SP) y defensa especial (DEF_SP) en Pokémon a lo largo de las diferentes generaciones. Sin embargo, esta correlación varía en fuerza en cada generación, siendo más fuerte en algunas generaciones y más débil en otras. Esto sugiere que la relación entre ATK_SP y DEF_SP puede estar influenciada por factores específicos de cada generación de Pokémon.
+
+\newpage
+
+# Conclusiones
+
+Aunque sigue representando un ítem muy estable, los puntos de salud siguen siendo más fuertes en la primera generación, a diferencia del ataque, donde si mejora considerablemente entre la primera y la novena generación en cuanto a números.
+
+Los puntos de defensa buscan mantenerse entre generación pero al incrementarse en la cuarta, los datos se tornan más dispersos y nos podemos encontrar con puntos muy altos o muy bajos dependiendo el Pokémon elegido.
+
+Se observa claramente el incremento de puntos con nuevos Pokémon legendarios en las últimas generaciones, haciéndolo muy atractivo a nivel de puntaje, sin embargo se debe tomar en cuenta de que un Pokémon puede ser muy fuerte en puntos de ataque pero muy débil en defensa y salud, entre otros casos. Por esta razón es importante para un jugador implementar una buena estrategia en caso de que no tenga tanta ventaja enfrentándose a su contrincante.
+
+Escoger a un Pokémon en tu equipo tomando en cuenta estas observaciones siempre dará una ventaja en combate al jugador que lo tome en cuenta; sin embargo serán la estrategias que implemente y las variables que lleve consigo a su favor en conjunto de estos conocimientos lo que le otorgará la victoria con su equipo, sea este seleccionado por generación o no.
+
+\newpage
+
+# Referencias
+
+Lista de Pokémon con sus características base. (s. f.). WikiDex. https://www.wikidex.net/wiki/Lista_de_Pok%C3%A9mon_con_sus_caracter%C3%ADsticas_base.
+
+Pokémon Wiki. (s. f.). Generaciones Pokémon. Pokémon Wiki. https://pokemon.fandom.com/es/wiki/Generaciones_Pok%C3%A9mon
