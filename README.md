@@ -1,5 +1,8 @@
 # Análisis Estadístico Pokémon
 ## Proyecto Académico Colaborativo: Estadística I
+
+<div align="justify">
+
 ### Planteamiento del Problema
 #### Contexto del Problema
 
@@ -9,7 +12,7 @@ El problema radica en que, a pesar de la experiencia de los jugadores, existe un
 
 ### Objetivos
 
-• Analizar la relación entre las estadísticas base de los Pokémon y su generación para identificar tendencias de crecimiento o equilibrio en los datos.
+* Analizar la relación entre las estadísticas base de los Pokémon y su generación para identificar tendencias de crecimiento o equilibrio en los datos.
 
 • Describir el comportamiento de cada ítem estadístico (Salud, Ataque, Defensa, Ataque Especial, Defensa Especial y Velocidad) mediante medidas de tendencia central y dispersión.
 
@@ -48,3 +51,5 @@ Para cumplir con los objetivos planteados, se aplicaron las siguientes técnicas
 ### Notas de los Autores
 
 "Escoger a un Pokémon tomando en cuenta estas observaciones otorga una ventaja táctica; sin embargo, es la implementación de estrategias basadas en datos lo que asegura la victoria en el ámbito competitivo." — David Bermúdez y María Ruiz.
+
+</div>
